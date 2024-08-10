@@ -19,6 +19,8 @@ function markarousel(options = {}) {
     const linkInactiveColor = options.linkInactiveColor || "#aaa";
     const linkBorderRadius = options.linkBorderRadius || "25%";
     const slideBackground = options.slideBackground || "#222";
+    // When > 0, swith to next every X seconds
+    const autoTransitionSeconds = options.autoTransitionSeconds || -1;
 
     function process() {
         injectStyle();
@@ -41,7 +43,10 @@ function markarousel(options = {}) {
 
     function isImageListItem(listItem) {
         return listItem.childNodes.length === 1 &&
-            listItem.childNodes[0].tagName === "IMG";
+            (listItem.childNodes[0].tagName === "IMG" || 
+                (listItem.childNodes[0].tagName === "A" &&
+                    listItem.childNodes[0].innerText.startsWith("VIDEO:")
+                ));
     }
 
     /* Convert */
@@ -61,10 +66,20 @@ function markarousel(options = {}) {
         const items = [...imageList.getElementsByTagName("li")];
         const images = items.map(li => {
             const img = li.firstChild;
-            return {
-                src: img.src,
-                caption: img.alt,
+            if (img.tagName === "IMG") {
+                return {
+                    src: img.src,
+                    caption: img.alt,
+                    type: "image",
+                }
+            } else {
+                return {
+                    src: img.href,
+                    caption: img.innerText.replace("VIDEO:", "").trim(),
+                    type: "video",
+                }
             }
+            
         });
         return images;
     }
@@ -74,11 +89,13 @@ function markarousel(options = {}) {
         let index = 0;
         let links = [];
         let images = [];
+        let autoTransSecs = autoTransitionSeconds;
         function next() { show((index + 1) % count); };
-        function prev() { show((index - 1 + count) % count); };
+        function prev() { show((index - 1 + count) % count); autoTransSecs = -1 };
         function setLinks(newLinks) { links = newLinks };
         function setImages(newImages) { images = newImages; count = images.length; };
         function show(n) {
+            
             images.forEach(image => image.style.display = "none");
             images[n].style.display = "block";
             links.forEach(link => link.className = link.className.replace(/markarousel-active/gi, ""));
@@ -87,6 +104,16 @@ function markarousel(options = {}) {
             }
             index = n;
         };
+        function autoTransition() {
+            setTimeout(() => {
+                if (autoTransSecs <= 0) {
+                    return;
+                }
+                next();
+                autoTransition();
+            }, autoTransSecs * 1000);
+        }
+        autoTransition();
         return { next, prev, show, count, setLinks, setImages };
     }
 
@@ -102,19 +129,28 @@ function markarousel(options = {}) {
         return images;
     }
 
-    function insertImage(image, container) {
+    function insertImage(spec, container) {
         const div = document.createElement("div");
         div.className = "markarousel-slide";
         div.style.display = "none";
         container.appendChild(div);
-        const img = document.createElement("img");
-        img.src = image.src;
-        img.alt = image.caption;
-        div.appendChild(img);
-        if (image.caption) {
+        if (spec.type === "image") {
+            const img = document.createElement("img");
+            img.src = spec.src;
+            img.alt = spec.caption;
+            div.appendChild(img);
+        } else {
+            const video = document.createElement("video");
+            video.controls = true;
+            const source = document.createElement("source");
+            source.src = spec.src;
+            video.appendChild(source);
+            div.appendChild(video);
+        }
+        if (spec.caption) {
             const caption = document.createElement("div");
             caption.className = "markarousel-caption";
-            caption.innerText = image.caption;
+            caption.innerText = spec.caption;
             div.appendChild(caption);
         }
         return div;
@@ -168,6 +204,12 @@ function markarousel(options = {}) {
 .markarousel-slide img {
     width: 100%;
     object-fit: contain;
+    max-height: ${imageMaxHeight};
+}
+
+.markarousel-slide video {
+    width: 100%;
+    margin: auto;
     max-height: ${imageMaxHeight};
 }
 

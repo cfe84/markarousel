@@ -4,14 +4,17 @@ Markarousel is a drop-in plugin that creates a simple image carousel on an HTML 
 
 # Usage
 
-In your markdown, create a non-numbered list of pictures somewhere. The alt-text will be used as legend.
+In your markdown, create a non-numbered list of pictures or videos somewhere. The alt-text will be used as legend.
 
 ```md
 - ![This is the first picture](./picture-1.png)
 - ![This is the second picture](./picture-2.png)
+- [VIDEO: A link to a video](./video-1.mp4)
 ```
 
-_Note: All elements in the list must be images, or else Markarousel will leave them alone._
+_Note: All elements in the list must be images or videos, or else Markarousel will leave them alone._
+
+Videos are simple URLs prefixed with: VIDEO.
 
 Then include markarousel at the bottom of the page: `<script src="https://raw.githubusercontent.com/cfe84/markarousel/main/markarousel.js"></script><script>markarousel()</script>`
 
