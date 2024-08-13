@@ -6,11 +6,11 @@
 function markarousel(options = {}) {
 
     const containerMaxWidth = options.containerMaxWidth || "90%";
-    const imageMaxHeight = options.imageMaxHeight || "800px";
+    const imageMaxHeight = options.imageMaxHeight || "400px";
     const fadeDurationSeconds = options.fadeDurationSeconds || .5;
     const captionsColor = options.captionsColor || "#eee";
     const captionsSize = options.captionsSize || "1em";
-    const hoverColor = options.hoverColor || "#222";
+    const hoverColor = options.hoverColor || "#08f";
     const buttonsSize = options.buttonsSize || "20px";
     const buttonsColor = options.buttonsColor || "#fff";
     const linkWidth = options.linkWidth || "25px";

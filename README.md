@@ -1,4 +1,4 @@
-Markarousel is a drop-in plugin that creates a simple image carousel on an HTML page generated using Markdown.
+Markarousel is a drop-in plugin that creates a simple image carousel on an HTML page generated using Markdown. It can be used on any HTML list as well.
 
 ![A picture of the demo](./img/demo.png)
 
@@ -16,7 +16,11 @@ _Note: All elements in the list must be images or videos, or else Markarousel wi
 
 Videos are simple URLs prefixed with: VIDEO.
 
-Then include markarousel at the bottom of the page: `<script src="https://raw.githubusercontent.com/cfe84/markarousel/main/markarousel.js"></script><script>markarousel()</script>`
+Then include markarousel at the bottom of the page: 
+```html
+<script src="https://cfe84.github.io/markarousel/markarousel.js"></script>
+<script>markarousel()</script>
+```
 
 And finally, generate HTML from markdown. When loading it, markarousel will replace your image lists by a carousel. (You can have multiple carousels per page).
 
