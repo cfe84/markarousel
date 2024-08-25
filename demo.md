@@ -14,5 +14,5 @@ Another list:
 
 <script  type='text/javascript' src="markarousel.js"></script>
 <script>
-    markarousel();
+    markarousel({ width: "80%" });
 </script>

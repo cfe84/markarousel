@@ -136,6 +136,7 @@ function markarousel(options = {}) {
         container.appendChild(div);
         if (spec.type === "image") {
             const img = document.createElement("img");
+            img.className = "markarousel-image";
             img.src = spec.src;
             img.alt = spec.caption;
             div.appendChild(img);
@@ -153,6 +154,14 @@ function markarousel(options = {}) {
             caption.innerText = spec.caption;
             div.appendChild(caption);
         }
+        const zoom = document.createElement("div");
+        zoom.innerHTML = "&#x1F50D;";
+        zoom.className = "markarousel-zoom";
+        zoom.onclick = function(e) {
+            e.preventDefault();
+            window.open(spec.src, '_blank');
+        };
+        div.appendChild(zoom);
         return div;
     }
 
@@ -264,6 +273,22 @@ function markarousel(options = {}) {
 
 .markarousel-active, .markarousel-link:hover {
   background-color: ${linkActiveColor};
+}
+
+.markarousel-zoom {
+  position: absolute;
+  bottom: 10px;
+  right: 20px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  padding: 5px;
+  cursor: pointer;
+  display: none;
+  font-size: 20px;
+}
+
+.markarousel-container:hover .markarousel-zoom {
+    display: block;
 }
 
 @keyframes fade {
