@@ -59,6 +59,7 @@ function markarousel(options = {}) {
         const images = insertImages(imageSpecs, container);
         controller.setImages(images);
         addControlButtons(container, controller);
+        addTouchSupport(container, controller);
         controller.show(0);
     }
 
@@ -195,6 +196,59 @@ function markarousel(options = {}) {
 
     /* Utils */
 
+    function addTouchSupport(container, controller) {
+        const swipeThresholdPx = 35;
+        let startX = 0;
+        let lastX = 0;
+        let active = false;
+
+        const startSwipe = (x) => {
+            active = true;
+            startX = x;
+            lastX = x;
+        };
+
+        const trackSwipe = (x) => {
+            if (!active) {
+                return;
+            }
+            lastX = x;
+        };
+
+        const endSwipe = () => {
+            if (!active) {
+                return;
+            }
+            const delta = lastX - startX;
+            if (Math.abs(delta) > swipeThresholdPx) {
+                if (delta < 0) {
+                    controller.next();
+                } else {
+                    controller.prev();
+                }
+            }
+            active = false;
+        };
+
+        if (window.PointerEvent) {
+            container.addEventListener("pointerdown", (e) => {
+                if (e.pointerType === "mouse") {
+                    return;
+                }
+                startSwipe(e.clientX);
+            });
+            container.addEventListener("pointermove", (e) => trackSwipe(e.clientX));
+            container.addEventListener("pointerup", () => endSwipe());
+            container.addEventListener("pointerleave", () => endSwipe());
+            container.addEventListener("pointercancel", () => endSwipe());
+        } else {
+            container.addEventListener("touchstart", (e) => startSwipe(e.touches[0].clientX));
+            container.addEventListener("touchmove", (e) => trackSwipe(e.touches[0].clientX));
+            container.addEventListener("touchend", () => endSwipe());
+            container.addEventListener("touchcancel", () => endSwipe());
+        }
+    }
+
     function injectStyle() {
         const styleContent = `
     
@@ -202,6 +256,7 @@ function markarousel(options = {}) {
     max-width: ${containerMaxWidth};
     position: relative;
     margin: auto;
+    touch-action: pan-y;
 }
 
 .markarousel-slide {
