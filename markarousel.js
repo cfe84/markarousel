@@ -300,6 +300,21 @@ function markarousel(options = {}) {
         const onKeyDown = (e) => {
             if (e.key === "Escape") {
                 hide();
+                return;
+            }
+            if (e.key === "ArrowRight" && nav.next) {
+                const nextSpec = nav.next();
+                if (nextSpec) {
+                    e.preventDefault();
+                    show(nextSpec, nav);
+                }
+            }
+            if (e.key === "ArrowLeft" && nav.prev) {
+                const prevSpec = nav.prev();
+                if (prevSpec) {
+                    e.preventDefault();
+                    show(prevSpec, nav);
+                }
             }
         };
 
