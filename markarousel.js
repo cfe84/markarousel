@@ -21,9 +21,11 @@ function markarousel(options = {}) {
     const slideBackground = options.slideBackground || "#222";
     // When > 0, swith to next every X seconds
     const autoTransitionSeconds = options.autoTransitionSeconds || -1;
+    let zoomOverlay;
 
     function process() {
         injectStyle();
+        zoomOverlay = createZoomOverlay();
         const imageLists = findImageLists();
         imageLists.forEach(convertListToCarousel);
     }
@@ -56,7 +58,7 @@ function markarousel(options = {}) {
         const controller = createController();
         const container = insertCarouselContainer(imageList);
         addLinks(container, controller, imageSpecs.length);
-        const images = insertImages(imageSpecs, container);
+        const images = insertImages(imageSpecs, container, controller);
         controller.setImages(images);
         addControlButtons(container, controller);
         addTouchSupport(container, controller);
@@ -93,6 +95,7 @@ function markarousel(options = {}) {
         let autoTransSecs = autoTransitionSeconds;
         function next() { show((index + 1) % count); };
         function prev() { show((index - 1 + count) % count); autoTransSecs = -1 };
+        function getIndex() { return index; }
         function setLinks(newLinks) { links = newLinks };
         function setImages(newImages) { images = newImages; count = images.length; };
         function show(n) {
@@ -115,7 +118,7 @@ function markarousel(options = {}) {
             }, autoTransSecs * 1000);
         }
         autoTransition();
-        return { next, prev, show, count, setLinks, setImages };
+        return { next, prev, show, count, setLinks, setImages, getIndex };
     }
 
     function insertCarouselContainer(imageList) {
@@ -125,12 +128,12 @@ function markarousel(options = {}) {
         return div;
     }
 
-    function insertImages(imageSpecs, container) {
-        const images = imageSpecs.map(image => insertImage(image, container));
+    function insertImages(imageSpecs, container, controller) {
+        const images = imageSpecs.map(image => insertImage(image, container, () => controller.getIndex(), controller));
         return images;
     }
 
-    function insertImage(spec, container) {
+    function insertImage(spec, container, getIndex, controller) {
         const div = document.createElement("div");
         div.className = "markarousel-slide";
         div.style.display = "none";
@@ -156,14 +159,39 @@ function markarousel(options = {}) {
             div.appendChild(caption);
         }
         const zoom = document.createElement("div");
-        zoom.innerHTML = "&#x1F50D;";
+        zoom.innerHTML = "&#x2922;";
         zoom.className = "markarousel-zoom";
         zoom.onclick = function(e) {
             e.preventDefault();
-            window.open(spec.src, '_blank');
+            zoomOverlay.show(spec, {
+                next: () => {
+                    controller.next();
+                    return imageSpecsAtIndex(container, getIndex());
+                },
+                prev: () => {
+                    controller.prev();
+                    return imageSpecsAtIndex(container, getIndex());
+                },
+            });
         };
         div.appendChild(zoom);
         return div;
+    }
+
+    function imageSpecsAtIndex(container, index) {
+        const allSlides = [...container.querySelectorAll(".markarousel-slide")];
+        if (!allSlides[index]) {
+            return null;
+        }
+        const img = allSlides[index].querySelector("img, video");
+        if (!img) {
+            return null;
+        }
+        if (img.tagName === "IMG") {
+            return { src: img.src, caption: img.alt, type: "image" };
+        }
+        const source = img.querySelector("source");
+        return { src: source ? source.src : img.src, caption: allSlides[index].querySelector(".markarousel-caption")?.innerText || "", type: "video" };
     }
 
     function addControlButtons(container, controller) {
@@ -249,6 +277,128 @@ function markarousel(options = {}) {
         }
     }
 
+    function createZoomOverlay() {
+        const overlay = document.createElement("div");
+        overlay.className = "markarousel-zoom-overlay";
+
+        const content = document.createElement("div");
+        content.className = "markarousel-zoom-content";
+        overlay.appendChild(content);
+
+        const close = document.createElement("div");
+        close.className = "markarousel-zoom-close";
+        close.innerText = "\u00d7";
+        overlay.appendChild(close);
+
+        const hide = () => {
+            overlay.classList.remove("markarousel-zoom-visible");
+            content.innerHTML = "";
+            document.removeEventListener("keydown", onKeyDown);
+            document.body.style.overflow = "";
+        };
+
+        const onKeyDown = (e) => {
+            if (e.key === "Escape") {
+                hide();
+            }
+        };
+
+        let nav = { next: null, prev: null };
+        const show = (spec, navigation) => {
+            nav = navigation || { next: null, prev: null };
+            content.innerHTML = "";
+            if (spec.type === "image") {
+                const img = document.createElement("img");
+                img.src = spec.src;
+                img.alt = spec.caption || "";
+                content.appendChild(img);
+            } else {
+                const video = document.createElement("video");
+                video.controls = true;
+                video.autoplay = true;
+                const source = document.createElement("source");
+                source.src = spec.src;
+                video.appendChild(source);
+                content.appendChild(video);
+            }
+            if (spec.caption) {
+                const caption = document.createElement("div");
+                caption.className = "markarousel-zoom-caption";
+                caption.innerText = spec.caption;
+                content.appendChild(caption);
+            }
+            overlay.classList.add("markarousel-zoom-visible");
+            document.addEventListener("keydown", onKeyDown);
+            document.body.style.overflow = "hidden";
+        };
+
+        /* Swipe inside overlay to navigate */
+        const swipeThresholdPx = 35;
+        let startX = 0;
+        let lastX = 0;
+        let active = false;
+
+        const startSwipe = (x) => {
+            active = true;
+            startX = x;
+            lastX = x;
+        };
+
+        const trackSwipe = (x) => {
+            if (!active) {
+                return;
+            }
+            lastX = x;
+        };
+
+        const endSwipe = () => {
+            if (!active) {
+                return;
+            }
+            const delta = lastX - startX;
+            if (Math.abs(delta) > swipeThresholdPx) {
+                if (delta < 0 && nav.next) {
+                    const nextSpec = nav.next();
+                    if (nextSpec) {
+                        show(nextSpec, nav);
+                    }
+                } else if (delta > 0 && nav.prev) {
+                    const prevSpec = nav.prev();
+                    if (prevSpec) {
+                        show(prevSpec, nav);
+                    }
+                }
+            }
+            active = false;
+        };
+
+        const swipeTarget = overlay;
+        if (window.PointerEvent) {
+            swipeTarget.addEventListener("pointerdown", (e) => {
+                startSwipe(e.clientX);
+            });
+            swipeTarget.addEventListener("pointermove", (e) => trackSwipe(e.clientX));
+            swipeTarget.addEventListener("pointerup", () => endSwipe());
+            swipeTarget.addEventListener("pointerleave", () => endSwipe());
+            swipeTarget.addEventListener("pointercancel", () => endSwipe());
+        } else {
+            swipeTarget.addEventListener("touchstart", (e) => startSwipe(e.touches[0].clientX));
+            swipeTarget.addEventListener("touchmove", (e) => trackSwipe(e.touches[0].clientX));
+            swipeTarget.addEventListener("touchend", () => endSwipe());
+            swipeTarget.addEventListener("touchcancel", () => endSwipe());
+        }
+
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) {
+                hide();
+            }
+        });
+        close.onclick = hide;
+
+        document.body.appendChild(overlay);
+        return { show, hide };
+    }
+
     function injectStyle() {
         const styleContent = `
     
@@ -257,6 +407,51 @@ function markarousel(options = {}) {
     position: relative;
     margin: auto;
     touch-action: pan-y;
+}
+
+.markarousel-zoom-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 9999;
+}
+
+.markarousel-zoom-visible {
+    display: flex;
+}
+
+.markarousel-zoom-content {
+    max-width: 90vw;
+    max-height: 90vh;
+    text-align: center;
+    position: relative;
+}
+
+.markarousel-zoom-content img,
+.markarousel-zoom-content video {
+    max-width: 100%;
+    max-height: 80vh;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
+    border-radius: 6px;
+}
+
+.markarousel-zoom-caption {
+    color: ${captionsColor};
+    margin-top: 10px;
+}
+
+.markarousel-zoom-close {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: #fff;
+    font-size: 30px;
+    cursor: pointer;
+    user-select: none;
 }
 
 .markarousel-slide {
@@ -331,19 +526,27 @@ function markarousel(options = {}) {
 }
 
 .markarousel-zoom {
-  position: absolute;
-  bottom: 10px;
-  right: 20px;
-  background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 50%;
-  padding: 5px;
-  cursor: pointer;
-  display: none;
-  font-size: 20px;
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    border-radius: 50%;
+    padding: 6px 7px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    line-height: 1;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    opacity: 0.8;
+    transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.markarousel-container:hover .markarousel-zoom {
-    display: block;
+.markarousel-zoom:hover {
+    opacity: 1;
+    transform: scale(1.05);
 }
 
 @keyframes fade {
