@@ -388,19 +388,26 @@ function markarousel(options = {}) {
         };
 
         const swipeTarget = overlay;
+        const listenerOptions = { passive: false };
         if (window.PointerEvent) {
             swipeTarget.addEventListener("pointerdown", (e) => {
                 startSwipe(e.clientX);
-            });
-            swipeTarget.addEventListener("pointermove", (e) => trackSwipe(e.clientX));
-            swipeTarget.addEventListener("pointerup", () => endSwipe());
-            swipeTarget.addEventListener("pointerleave", () => endSwipe());
-            swipeTarget.addEventListener("pointercancel", () => endSwipe());
+            }, listenerOptions);
+            swipeTarget.addEventListener("pointermove", (e) => {
+                trackSwipe(e.clientX);
+                e.preventDefault();
+            }, listenerOptions);
+            swipeTarget.addEventListener("pointerup", () => endSwipe(), listenerOptions);
+            swipeTarget.addEventListener("pointerleave", () => endSwipe(), listenerOptions);
+            swipeTarget.addEventListener("pointercancel", () => endSwipe(), listenerOptions);
         } else {
-            swipeTarget.addEventListener("touchstart", (e) => startSwipe(e.touches[0].clientX));
-            swipeTarget.addEventListener("touchmove", (e) => trackSwipe(e.touches[0].clientX));
-            swipeTarget.addEventListener("touchend", () => endSwipe());
-            swipeTarget.addEventListener("touchcancel", () => endSwipe());
+            swipeTarget.addEventListener("touchstart", (e) => startSwipe(e.touches[0].clientX), listenerOptions);
+            swipeTarget.addEventListener("touchmove", (e) => {
+                trackSwipe(e.touches[0].clientX);
+                e.preventDefault();
+            }, listenerOptions);
+            swipeTarget.addEventListener("touchend", () => endSwipe(), listenerOptions);
+            swipeTarget.addEventListener("touchcancel", () => endSwipe(), listenerOptions);
         }
 
         overlay.addEventListener("click", (e) => {
@@ -433,6 +440,7 @@ function markarousel(options = {}) {
     justify-content: center;
     padding: 20px;
     z-index: 9999;
+    touch-action: none;
 }
 
 .markarousel-zoom-visible {
