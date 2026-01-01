@@ -70,6 +70,13 @@ function markarousel(options = {}) {
         const images = items.map(li => {
             const img = li.firstChild;
             if (img.tagName === "IMG") {
+                if (img.src.endsWith(".mp4") || img.src.endsWith(".webm") || img.src.endsWith(".ogg") || img.src.endsWith(".mov")) {
+                    return {
+                        src: img.src,
+                        caption: img.alt,
+                        type: "video",
+                    }
+                }
                 return {
                     src: img.src,
                     caption: img.alt,
